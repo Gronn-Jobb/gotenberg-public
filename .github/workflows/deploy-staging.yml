@@ -1,4 +1,4 @@
-name: Azure Container Apps Deploy
+name: Deploy staging
 
 on:
   workflow_dispatch:
@@ -11,35 +11,10 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    environment: stg
-
-    env:
-      IMAGE: ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.DOCKER_REPOSITORY}}:${{ github.run_number }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # The Dockerfile's last stage is a LibreOffice-only variant, so the target must be explicit.
-      - name: Build and push image
-        run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
-          docker build --target gotenberg -t "$IMAGE" -f Dockerfile .
-          docker push "$IMAGE"
-
-      - name: Deploy to Container App
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          acrName: ${{ secrets.ACR_NAME }}
-          imageToDeploy: ${{ env.IMAGE }}
-          containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
-          resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+  deploy:
+    uses: Gronn-Jobb/shared-workflows/.github/workflows/deploy-container-app.yml@staging
+    with:
+      environment: stg
+      # The Dockerfile's last stage is a LibreOffice-only variant.
+      docker-target: gotenberg
+    secrets: inherit
